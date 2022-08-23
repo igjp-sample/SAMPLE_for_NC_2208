@@ -40,8 +40,8 @@
     </IgbDataGrid>
 </div>
 
-<button @onclick="ButtonClick01">11行目を選択＆スクロール</button>
-<button @onclick="ButtonClick02">12行目製品名を選択＆スクロール</button>
+<button @onclick="ButtonClick01">10行目を選択＆スクロール</button>
+<button @onclick="ButtonClick02">11行目製品名を選択＆スクロール</button>
 
 @code {
     private string[] primaryKeys = { "ProductID" };
@@ -266,13 +266,14 @@
     void ButtonClick02()
     {
         var grid = this.DataGridRef;
-        this.SelectionMode = GridSelectionMode.SingleCell;
-        var sc = grid.SelectedCells;
-        //grid.ActiveCell = IgbGridCellPosition(1,1)
-        var selectTargetCell = new IgbCellKey();
-        selectTargetCell.ColumnUniqueKey = "ProductName";
-        selectTargetCell.PrimaryKey = new IgbPrimaryKeyValue(new String[] { "ProductID" }, new object[] { 11 });
-        grid.SelectedCells.Add(selectTargetCell);
+        this.SelectionMode = GridSelectionMode.RangeCell;  
+        grid.SelectedCellRanges.Add(new IgbCellRange()
+            {
+                StartColumn = 1,
+                EndColumn = 1,
+                StartRow = 10,
+                EndRow = 10
+            });
         grid.ScrollToRowByIndex(10);
     }
     private void OnFilterTextChanged(ChangeEventArgs e)
@@ -294,7 +295,7 @@
     {
 
     }
-
+   
     public string DataGridResourceStrings()
     {
         GridStrings =

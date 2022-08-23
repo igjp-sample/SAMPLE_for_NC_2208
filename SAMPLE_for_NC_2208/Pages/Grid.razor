@@ -32,11 +32,12 @@
                  DataSource="ViewDataSource"
                  PrimaryKey="primaryKeys"
                  SelectionMode="@SelectionMode"
+                 ActiveCellChanged="ActiveCellChanged"
                  AutoGenerateColumns="false">
-        <IgbNumericColumn Field="ProductID" HeaderText="ID" />
-        <IgbTextColumn Field="ProductName" HeaderText="製品名" />
-        <IgbTextColumn Field="CategoryName" HeaderText="カテゴリ" DataBoundScript="onColumnDataBound" />
-        <IgbNumericColumn Field="InStock" HeaderText="在庫数" />
+        <IgbNumericColumn Field="ProductID" Name="ProductID" HeaderText="ID" />
+        <IgbTextColumn Field="ProductName" Name="ProductName" HeaderText="製品名" />
+        <IgbTextColumn Field="CategoryName" Name="CategoryName" HeaderText="カテゴリ" DataBoundScript="onColumnDataBound" />
+        <IgbNumericColumn Field="InStock" Name="InStock" HeaderText="在庫数" />
     </IgbDataGrid>
 </div>
 
@@ -240,6 +241,7 @@
                 StartRow = startingRowIndex,
                 EndRow = startingRowIndex + pasteRowCount - 1
             });
+        grid.CancelEdits();
 
         if (isParseFaild)
             await ClipboardService.AlertMessageAsync("データ型が一致しない箇所がありました。型を確認して再度試してください");
@@ -259,6 +261,11 @@
         return listedPastData;
     }
 
+    private void ActiveCellChanged(IgbGridActiveCellChangedEventArgs args)
+    {
+        // 現状、アクティブセルの取得にはこのイベントハンドラが必要
+    }
+
     void ButtonClick01()
     {
         var grid = this.DataGridRef;
@@ -271,14 +278,21 @@
     void ButtonClick02()
     {
         var grid = this.DataGridRef;
-        this.SelectionMode = GridSelectionMode.RangeCell;  
-        grid.SelectedCellRanges.Add(new IgbCellRange()
+        this.SelectionMode = GridSelectionMode.SingleCell;
+        grid.SelectedCells.Add(new IgbCellKey()
             {
-                StartColumn = 1,
-                EndColumn = 1,
-                StartRow = 10,
-                EndRow = 10
+                ColumnUniqueKey = "ProductName",
+                PrimaryKey = new IgbPrimaryKeyValue(new String[] { "ProductID" }, new object[] { 11 })
+
             });
+        //CellRangeのパターン
+        //grid.SelectedCellRanges.Add(new IgbCellRange()
+        //    {
+        //        StartColumn = 1,
+        //        EndColumn = 1,
+        //        StartRow = 10,
+        //        EndRow = 10
+        //    });
         grid.ScrollToRowByIndex(10);
     }
 

@@ -29,7 +29,7 @@
                  Width="100%"
                  @ref="DataGridRef"
                  @oncontextmenu="onContextMenu"
-                 DataSource="DataSource"
+                 DataSource="ViewDataSource"
                  PrimaryKey="primaryKeys"
                  SelectionMode="@SelectionMode"
                  AutoGenerateColumns="false">
@@ -40,8 +40,8 @@
     </IgbDataGrid>
 </div>
 
-<button @onclick="ButtonClick01">11行目を選択＆スクロール</button>
-<button @onclick="ButtonClick02">12行目製品名を選択＆スクロール</button>
+<button @onclick="ButtonClick01">10行目を選択＆スクロール</button>
+<button @onclick="ButtonClick02">11行目製品名を選択＆スクロール</button>
 
 @code {
     private string[] primaryKeys = { "ProductID" };
@@ -49,20 +49,21 @@
     private String GridStrings;
     private string FilterText = "";
     private FilterFactory FilterFactory = new FilterFactory();
-    private List<northwindProducts> DataSource;
+    private List<northwindProducts> OriginalDataSource;
+    private List<northwindProducts> ViewDataSource;
     private IgbDataGrid _grid;
     public IgbDataGrid DataGridRef
 
     {
         get { return _grid; }
-        set { _grid = value; Task.Delay(1).ContinueWith((t) => this.OnDataGridRef()); StateHasChanged();}
+        set { _grid = value; Task.Delay(1).ContinueWith((t) => this.OnDataGridRef()); StateHasChanged(); }
     }
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
         IgbDataGridModule.Register(IgniteUIBlazor);
-        this.DataSource = new List<northwindProducts>
+        this.OriginalDataSource = new List<northwindProducts>
           {
             new northwindProducts { ProductID=1, ProductName="果汁100% オレンジ", CategoryName="飲料", InStock=39 },
             new northwindProducts { ProductID=2, ProductName="果汁100% グレープ", CategoryName="飲料", InStock=17 },
@@ -85,6 +86,9 @@
             new northwindProducts { ProductID=19, ProductName="チョコクリームアイス", CategoryName="菓子類", InStock=18 },
             new northwindProducts { ProductID=20, ProductName="紅茶バー", CategoryName="菓子類", InStock=18 },
           };
+
+        this.ViewDataSource = this.OriginalDataSource;
+
         this.SelectionMode = GridSelectionMode.RangeCell;
     }
 
@@ -225,7 +229,7 @@
                 }
             }
             // グリッドのデータ更新
-            grid.NotifyUpdateItem(this.DataSource, this.DataSource.IndexOf(item), item);
+            grid.NotifyUpdateItem(this.ViewDataSource, this.ViewDataSource.IndexOf(item), item);
         }
 
         //貼り付けしたセルの範囲を選択状態に設定
@@ -263,6 +267,7 @@
         grid.SelectedKeys.Add(new IgbPrimaryKeyValue(new String[] { "ProductID" }, new object[] { 10 }));
         grid.ScrollToRowByIndex(9);
     }
+
     void ButtonClick02()
     {
         var grid = this.DataGridRef;
@@ -275,21 +280,25 @@
         grid.SelectedCells.Add(selectTargetCell);
         grid.ScrollToRowByIndex(10);
     }
+
     private void OnFilterTextChanged(ChangeEventArgs e)
     {
         this.FilterText = e.Value.ToString();
-        this.DataGridRef.FilterExpressions.Clear();
+
         if (this.FilterText == "")
         {
+            this.ViewDataSource = this.OriginalDataSource;
             return;
         }
-        string expression = this.FilterText.ToUpper();
-        IgbFilterExpression column = this.FilterFactory.Property("CategoryName");
-        IgbFilterExpression filter = new IgbFilterExpression();
-        filter = column.IsEqualTo(expression);
-        this.DataGridRef.FilterExpressions.Add(filter);
+
+        this.ViewDataSource = this.OriginalDataSource.Where(c => c.ProductID.ToString() == this.FilterText ||
+                                                  c.ProductName.Contains(this.FilterText) ||
+                                                  c.CategoryName.Contains(this.FilterText) ||
+                                                  c.InStock.ToString() == this.FilterText).ToList();
+
         StateHasChanged();
     }
+
     private void onContextMenu(MouseEventArgs args)
     {
 

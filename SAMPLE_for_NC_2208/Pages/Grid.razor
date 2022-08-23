@@ -1,0 +1,365 @@
+﻿@page "/grid"
+@inject ClipboardService ClipboardService;
+@using System;
+@using System.Text;
+@using IgniteUI.Blazor.Controls;
+@inject IIgniteUIBlazor IgniteUIBlazor;
+
+<h3>Grid</h3>
+
+<div class="options horizontal">
+    <span>Selection Mode:</span>
+    <select @bind="SelectionMode">
+        <option>@GridSelectionMode.None</option>
+        <option>@GridSelectionMode.SingleCell</option>
+        <option>@GridSelectionMode.SingleRow</option>
+        <option>@GridSelectionMode.MultipleCell</option>
+        <option>@GridSelectionMode.MultipleRow</option>
+        <option>@GridSelectionMode.RangeCell</option>
+    </select>
+</div>
+
+<div class="options horizontal">
+    <label class="options-item"> 全セル検索: </label>
+    <input class="options-text" type="text" name="title" @onchange="OnFilterTextChanged" />
+</div>
+
+<div @onkeydown="KeyboardEventHandler" style="height:400px;margin: 1em 0">
+    <IgbDataGrid Height="100%"
+                 Width="100%"
+                 @ref="DataGridRef"
+                 @oncontextmenu="onContextMenu"
+                 DataSource="DataSource"
+                 PrimaryKey="primaryKeys"
+                 SelectionMode="@SelectionMode"
+                 AutoGenerateColumns="false">
+        <IgbNumericColumn Field="ProductID" HeaderText="ID" />
+        <IgbTextColumn Field="ProductName" HeaderText="製品名" />
+        <IgbTextColumn Field="CategoryName" HeaderText="カテゴリ" DataBoundScript="onColumnDataBound" />
+        <IgbNumericColumn Field="InStock" HeaderText="在庫数" />
+    </IgbDataGrid>
+</div>
+
+<button @onclick="ButtonClick01">11行目を選択＆スクロール</button>
+<button @onclick="ButtonClick02">12行目製品名を選択＆スクロール</button>
+
+@code {
+    private string[] primaryKeys = { "ProductID" };
+    private GridSelectionMode SelectionMode;
+    private String GridStrings;
+    private string FilterText = "";
+    private FilterFactory FilterFactory = new FilterFactory();
+    private List<northwindProducts> DataSource;
+    private IgbDataGrid _grid;
+    public IgbDataGrid DataGridRef
+
+    {
+        get { return _grid; }
+        set { _grid = value; Task.Delay(1).ContinueWith((t) => this.OnDataGridRef()); StateHasChanged();}
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        IgbDataGridModule.Register(IgniteUIBlazor);
+        this.DataSource = new List<northwindProducts>
+          {
+            new northwindProducts { ProductID=1, ProductName="果汁100% オレンジ", CategoryName="飲料", InStock=39 },
+            new northwindProducts { ProductID=2, ProductName="果汁100% グレープ", CategoryName="飲料", InStock=17 },
+            new northwindProducts { ProductID=3, ProductName="ホワイトソルト", CategoryName="調味料", InStock=13 },
+            new northwindProducts { ProductID=4, ProductName="ブラックペッパー", CategoryName="調味料", InStock=20 },
+            new northwindProducts { ProductID=5, ProductName="ピュアシュガー", CategoryName="調味料", InStock=19 },
+            new northwindProducts { ProductID=6, ProductName="うまい素", CategoryName="調味料", InStock=42 },
+            new northwindProducts { ProductID=7, ProductName="乾燥バナナ", CategoryName="加工食品", InStock=33 },
+            new northwindProducts { ProductID=8, ProductName="ピュアデミグラスソース", CategoryName="調味料", InStock=9 },
+            new northwindProducts { ProductID=9, ProductName="アメリカンポーク", CategoryName="肉類", InStock=18 },
+            new northwindProducts { ProductID=10, ProductName="大陸サーモン", CategoryName="魚介類", InStock=20 },
+            new northwindProducts { ProductID=11, ProductName="ロッキーチーズ", CategoryName="乳製品", InStock=9 },
+            new northwindProducts { ProductID=12, ProductName="フレッシュバター", CategoryName="乳製品", InStock=24 },
+            new northwindProducts { ProductID=13, ProductName="うなぎ", CategoryName="魚介類", InStock=11 },
+            new northwindProducts { ProductID=14, ProductName="乾燥アップル", CategoryName="加工食品", InStock=40 },
+            new northwindProducts { ProductID=15, ProductName="だしかつお", CategoryName="調味料", InStock=38 },
+            new northwindProducts { ProductID=16, ProductName="バニラクリームアイス", CategoryName="菓子類", InStock=13 },
+            new northwindProducts { ProductID=17, ProductName="うす味ウインナー", CategoryName="肉類", InStock=25 },
+            new northwindProducts { ProductID=18, ProductName="かに", CategoryName="魚介類", InStock=10 },
+            new northwindProducts { ProductID=19, ProductName="チョコクリームアイス", CategoryName="菓子類", InStock=18 },
+            new northwindProducts { ProductID=20, ProductName="紅茶バー", CategoryName="菓子類", InStock=18 },
+          };
+        this.SelectionMode = GridSelectionMode.RangeCell;
+    }
+
+    private async Task OnDataGridRef()
+    {
+        await DataGridRef.SetCustomizedStringAsync("en", DataGridResourceStrings());
+    }
+
+    public class northwindProducts
+    {
+        public int ProductID { get; set; }
+        public string ProductName { get; set; }
+        public string CategoryName { get; set; }
+        public int InStock { get; set; }
+    }
+
+    private async void KeyboardEventHandler(KeyboardEventArgs args)
+    {
+        if (args.CtrlKey)
+        {
+            switch (args.Key)
+            {
+                // コピー
+                case "c":
+                    // クリップボードにコピー
+                    await CopyToClipboard();
+                    break;
+                // 貼り付け
+                case "v":
+                    // クリップボードから貼り付け
+                    await PastFromClipboard();
+                    break;
+            }
+        }
+    }
+
+    // クリップボードに選択セルの情報をコピー
+    async Task CopyToClipboard()
+    {
+        var grid = this.DataGridRef;
+        StringBuilder sb = new StringBuilder();
+
+        //現在の選択セルを取得
+        IgbGridSelectedCellRangesCollection cellRanges = await grid.GetCurrentSelectedCellRangesAsync();
+        IgbCellRange cellRange = cellRanges.FirstOrDefault();
+        if (cellRange == null)
+            return;
+
+        // 範囲選択セルの行数ループ処理
+        for (var i = cellRange.StartRow; i <= cellRange.EndRow; i++)
+        {
+            // グリッドにバインドしているデータアイテムの取得
+            //northwindProducts item = await grid.ActualDataSource.GetItemAtIndexAsync(i) as northwindProducts;
+            // 範囲選択セルの列数ループ処理
+            for (var j = cellRange.StartColumn; j <= cellRange.EndColumn; j++)
+            {
+                // 該当セルの値取得および文字列連結
+                var cellValue = await grid.ResolveCellValueFromPositionAsync(i, j);
+                sb.Append(cellValue);
+                if (j != cellRange.EndColumn)
+                {
+                    sb.Append("\t");
+                }
+            }
+            sb.AppendLine();
+        }
+        // クリップボードへコピー
+        await ClipboardService.WriteTextAsync(sb.ToString());
+    }
+
+    // クリップボードからグリッドセルへ貼り付け（Activeセルが起点となる）
+    async Task PastFromClipboard()
+    {
+        //クリップボードからテキストを取得
+        string text = await ClipboardService.ReadTextAsync();
+        // クリップボードの文字をタブや改行コードで分割し、２次元リストへ格納
+        List<List<string>> listedPastData = ProcessData(text);
+
+        bool isParseFaild = false;  // 貼り付け途中で型変換に失敗した場合True
+
+        var grid = this.DataGridRef;
+
+        //アクティブセルのインデックス取得
+        var startingRowIndex = grid.ActiveCell.RowIndex;
+        var startingColIndex = -1;
+        for (var i = 0; i < grid.ActualColumns.Count; i++)
+        {
+            string columnKey = await grid.ActualColumns[i].GetUniqueKeyAsync();
+            if (columnKey == grid.ActiveCell.ColumnUniqueKey)
+            {
+                startingColIndex = i;
+                break;
+            }
+        }
+        if (startingColIndex == -1) return;
+
+        // 貼り付け対象のカラム数と行数を設定
+        var pasteRowCount = listedPastData.Count;
+        var pasteColumnCount = listedPastData[0].Count;
+
+        // 貼り付け対象がグリッドの行数や列数を超えた場合はエラーとする
+        if (grid.ActualColumns.Count < startingColIndex + pasteColumnCount)
+        {
+            await ClipboardService.AlertMessageAsync("対象範囲を超えているため貼り付けられません。");
+            return;
+        }
+
+        // 貼り付け対象の行数分ループで処理
+        for (var rowIdx = 0; rowIdx < pasteRowCount; rowIdx++)
+        {
+            // グリッドにバインドしているデータアイテムの取得
+            northwindProducts item = await grid.ActualDataSource.GetItemAtIndexAsync(rowIdx + startingRowIndex) as northwindProducts;
+
+            // 貼り付け対象の列数分ループで処理
+            for (var colIdx = 0; colIdx < pasteColumnCount; colIdx++)
+            {
+                string pasteValue = listedPastData[rowIdx][colIdx];
+                var column = grid.ActualColumns[colIdx + startingColIndex];
+                var propertyToUpdate = item.GetType().GetProperty(column.Field);
+
+                // 貼り付け先のバインドデータの型を参照してパース処理
+                // ※このサンプルでは型がStringとdoubleだけだが、他の方にも対応する必要あり
+                if (propertyToUpdate.GetValue(item).GetType() == typeof(string))
+                {
+                    propertyToUpdate.SetValue(item, pasteValue);
+                }
+                else if (propertyToUpdate.GetValue(item).GetType() == typeof(int))
+                {
+                    int value;
+                    if (int.TryParse(pasteValue, out value))
+                    {
+                        propertyToUpdate.SetValue(item, value);
+                    }
+                    else
+                    {
+                        isParseFaild = true;
+                    }
+                }
+            }
+            // グリッドのデータ更新
+            grid.NotifyUpdateItem(this.DataSource, this.DataSource.IndexOf(item), item);
+        }
+
+        //貼り付けしたセルの範囲を選択状態に設定
+        grid.SelectedCellRanges.Add(new IgbCellRange()
+            {
+                StartColumn = startingColIndex,
+                EndColumn = startingColIndex + pasteColumnCount - 1,
+                StartRow = startingRowIndex,
+                EndRow = startingRowIndex + pasteRowCount - 1
+            });
+
+        if (isParseFaild)
+            await ClipboardService.AlertMessageAsync("データ型が一致しない箇所がありました。型を確認して再度試してください");
+
+    }
+
+    // 文字列で渡されるクリップボードのデータをリストに格納
+    private List<List<string>> ProcessData(string data)
+    {
+        string[] pasteData = data.Split("\n");
+        List<List<string>> listedPastData = new List<List<string>>();
+        for (int i = 0; i < pasteData.Length; i++)
+        {
+            if (pasteData[i].Length > 0)
+                listedPastData.Add(new List<string>(pasteData[i].Split("\t")));
+        }
+        return listedPastData;
+    }
+
+    void ButtonClick01()
+    {
+        var grid = this.DataGridRef;
+        this.SelectionMode = GridSelectionMode.SingleRow;
+        grid.DeselectAllRows();
+        grid.SelectedKeys.Add(new IgbPrimaryKeyValue(new String[] { "ProductID" }, new object[] { 10 }));
+        grid.ScrollToRowByIndex(9);
+    }
+    void ButtonClick02()
+    {
+        var grid = this.DataGridRef;
+        this.SelectionMode = GridSelectionMode.SingleCell;
+        var sc = grid.SelectedCells;
+        //grid.ActiveCell = IgbGridCellPosition(1,1)
+        var selectTargetCell = new IgbCellKey();
+        selectTargetCell.ColumnUniqueKey = "ProductName";
+        selectTargetCell.PrimaryKey = new IgbPrimaryKeyValue(new String[] { "ProductID" }, new object[] { 11 });
+        grid.SelectedCells.Add(selectTargetCell);
+        grid.ScrollToRowByIndex(10);
+    }
+    private void OnFilterTextChanged(ChangeEventArgs e)
+    {
+        this.FilterText = e.Value.ToString();
+        this.DataGridRef.FilterExpressions.Clear();
+        if (this.FilterText == "")
+        {
+            return;
+        }
+        string expression = this.FilterText.ToUpper();
+        IgbFilterExpression column = this.FilterFactory.Property("CategoryName");
+        IgbFilterExpression filter = new IgbFilterExpression();
+        filter = column.IsEqualTo(expression);
+        this.DataGridRef.FilterExpressions.Add(filter);
+        StateHasChanged();
+    }
+    private void onContextMenu(MouseEventArgs args)
+    {
+
+    }
+
+    public string DataGridResourceStrings()
+    {
+        GridStrings =
+            "{\"Apply\":\"適用\"," +
+            "\"Cancel\":\"キャンセル\"," +
+            "\"Clear_Column_Filter\":\"列フィルターをクリア\"," +
+            "\"Column_Move\":\"移動\"," +
+            "\"Column_Move_Left\":\"左\"," +
+            "\"Column_Move_Right\":\"右\"," +
+            "\"Column_Options_Summaries\":\"集計\"," +
+            "\"Column_Options_Summary_Average\":\"平均\"," +
+            "\"Column_Options_Summary_Count\":\"カウント\"," +
+            "\"Column_Options_Summary_Maximum\":\"最大値\"," +
+            "\"Column_Options_Summary_Minimum\":\"最小値\"," +
+            "\"Column_Options_Summary_Sum\":\"合計値\"," +
+            "\"Column_Pin\":\"ピン固定\"," +
+            "\"Column_Pin_Left\":\"左\"," +
+            "\"Column_Pin_Right\":\"右\"," +
+            "\"Column_Sort\":\"ソート\"," +
+            "\"Column_Sort_Ascending\":\"昇順\"," +
+            "\"Column_Sort_Descending\":\"降順\"," +
+            "\"ComparisonOperator_Bottom\":\"下\"," +
+            "\"ComparisonOperator_BottomPercentile\":\"下位の百分位数\"," +
+            "\"ComparisonOperator_Contains\":\"～を含む\"," +
+            "\"ComparisonOperator_DoesNotContain\":\"～を含まない\"," +
+            "\"ComparisonOperator_DoesNotEndWith\":\"～で終わらない\"," +
+            "\"ComparisonOperator_DoesNotMatch\":\"～と一致しない\"," +
+            "\"ComparisonOperator_DoesNotStartWith\":\"～で始まらない\"," +
+            "\"ComparisonOperator_Empty\":\"空\"," +
+            "\"ComparisonOperator_EndsWith\":\"次の値で終わる\"," +
+            "\"ComparisonOperator_Equals\":\"等しい\"," +
+            "\"ComparisonOperator_False\":\"False\"," +
+            "\"ComparisonOperator_GreaterThan\":\"次の値より大きい\"," +
+            "\"ComparisonOperator_GreaterThanOrEqualTo\":\"次の値より大きいまたは等しい\"," +
+            "\"ComparisonOperator_LastMonth\":\"先月\"," +
+            "\"ComparisonOperator_LastQuater\":\"前四半期\"," +
+            "\"ComparisonOperator_LastWeek\":\"先週\"," +
+            "\"ComparisonOperator_LastYear\":\"昨年\"," +
+            "\"ComparisonOperator_LessThan\":\"次の値より小さい\"," +
+            "\"ComparisonOperator_LessThanOrEqualTo\":\"次の値より小さいまたは等しい\"," +
+            "\"ComparisonOperator_NextMonth\":\"翌月\"," +
+            "\"ComparisonOperator_NextQuater\":\"翌四半期\"," +
+            "\"ComparisonOperator_NextWeek\":\"来週\"," +
+            "\"ComparisonOperator_NextYear\":\"翌年\"," +
+            "\"ComparisonOperator_NotEmpty\":\"空ではない\"," +
+            "\"ComparisonOperator_NotEquals\":\"次の値に等しくない\"," +
+            "\"ComparisonOperator_StartsWith\":\"～で始まる\"," +
+            "\"ComparisonOperator_ThisMonth\":\"今月\"," +
+            "\"ComparisonOperator_ThisQuarter\":\"本四半期\"," +
+            "\"ComparisonOperator_ThisWeek\":\"今週\"," +
+            "\"ComparisonOperator_ThisYear\":\"今年\"," +
+            "\"ComparisonOperator_Today\":\"今日\"," +
+            "\"ComparisonOperator_Tomorrow\":\"明日\"," +
+            "\"ComparisonOperator_Top\":\"上\"," +
+            "\"ComparisonOperator_TopPercentile\":\"上位の百分位数\"," +
+            "\"ComparisonOperator_True\":\"True\"," +
+            "\"ComparisonOperator_Yesterday\":\"昨日\"," +
+            "\"Filter_Columns_List\":\"列リストのフィルター...\"," +
+            "\"Search\":\"検索\"," +
+            "\"Select_All\":\"(すべて選択)\"," +
+            "\"DataSource_Summary_Avg\":\"平均\"," +
+            "\"DataSource_Summary_Count\":\"カウント\"," +
+            "\"DataSource_Summary_Max\":\"最大値\"," +
+            "\"DataSource_Summary_Min\":\"最小値\"," +
+            "\"DataSource_Summary_Sum\":\"合計値\"}";
+        return GridStrings;
+    }
+}

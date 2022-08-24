@@ -43,6 +43,7 @@
 
 <button @onclick="ButtonClick01">10行目を選択＆スクロール</button>
 <button @onclick="ButtonClick02">11行目製品名を選択＆スクロール</button>
+<button @onclick="ButtonClick03">撰択行の情報取得</button>
 
 @code {
     private string[] primaryKeys = { "ProductID" };
@@ -295,6 +296,14 @@
         //    });
         grid.ScrollToRowByIndex(10);
     }
+
+    async Task ButtonClick03()
+    {
+        var grid = this.DataGridRef;
+        IgbGridSelectedItemsCollection selectedItems = await grid.GetCurrentSelectedItemsAsync();
+        //loop中身を取り出すには？
+    }
+
 
     private void OnFilterTextChanged(ChangeEventArgs e)
     {

@@ -301,7 +301,9 @@
     {
         var grid = this.DataGridRef;
         IgbGridSelectedItemsCollection selectedItems = await grid.GetCurrentSelectedItemsAsync();
-        //loop中身を取り出すには？
+        foreach (var item in selectedItems) { 
+            Console.WriteLine("{0},{1},{2},{3}", ((northwindProducts)item).ProductID, ((northwindProducts)item).ProductName, ((northwindProducts)item).CategoryName, ((northwindProducts)item).InStock);
+        }
     }
 
 

@@ -34,6 +34,15 @@
                  SelectionMode="@SelectionMode"
                  ActiveCellChanged="ActiveCellChanged"
                  AutoGenerateColumns="false">
+        <IgbTemplateColumn Field="IsCheck" HeaderText="チェック列">
+            <Template>
+                <input 
+                    type="checkbox"
+                    checked="@((context.RowItem as northwindProducts).IsCheck)"
+                    @onchange="eventArgs => { onChangeIsCheck(context.RowItem as northwindProducts, eventArgs); }">
+            </Template>
+        </IgbTemplateColumn>
+        <IgbTextColumn Field="IsCheck" Name="IsCheck" HeaderText="状態列" />
         <IgbNumericColumn Field="ProductID" Name="ProductID" HeaderText="ID" />
         <IgbTextColumn Field="ProductName" Name="ProductName" HeaderText="製品名" />
         <IgbTextColumn Field="CategoryName" Name="CategoryName" HeaderText="カテゴリ" DataBoundScript="onColumnDataBound" />
@@ -67,26 +76,26 @@
         IgbDataGridModule.Register(IgniteUIBlazor);
         this.OriginalDataSource = new List<northwindProducts>
           {
-            new northwindProducts { ProductID=1, ProductName="果汁100% オレンジ", CategoryName="飲料", InStock=39 },
-            new northwindProducts { ProductID=2, ProductName="果汁100% グレープ", CategoryName="飲料", InStock=17 },
-            new northwindProducts { ProductID=3, ProductName="ホワイトソルト", CategoryName="調味料", InStock=13 },
-            new northwindProducts { ProductID=4, ProductName="ブラックペッパー", CategoryName="調味料", InStock=20 },
-            new northwindProducts { ProductID=5, ProductName="ピュアシュガー", CategoryName="調味料", InStock=19 },
-            new northwindProducts { ProductID=6, ProductName="うまい素", CategoryName="調味料", InStock=42 },
-            new northwindProducts { ProductID=7, ProductName="乾燥バナナ", CategoryName="加工食品", InStock=33 },
-            new northwindProducts { ProductID=8, ProductName="ピュアデミグラスソース", CategoryName="調味料", InStock=9 },
-            new northwindProducts { ProductID=9, ProductName="アメリカンポーク", CategoryName="肉類", InStock=18 },
-            new northwindProducts { ProductID=10, ProductName="大陸サーモン", CategoryName="魚介類", InStock=20 },
-            new northwindProducts { ProductID=11, ProductName="ロッキーチーズ", CategoryName="乳製品", InStock=9 },
-            new northwindProducts { ProductID=12, ProductName="フレッシュバター", CategoryName="乳製品", InStock=24 },
-            new northwindProducts { ProductID=13, ProductName="うなぎ", CategoryName="魚介類", InStock=11 },
-            new northwindProducts { ProductID=14, ProductName="乾燥アップル", CategoryName="加工食品", InStock=40 },
-            new northwindProducts { ProductID=15, ProductName="だしかつお", CategoryName="調味料", InStock=38 },
-            new northwindProducts { ProductID=16, ProductName="バニラクリームアイス", CategoryName="菓子類", InStock=13 },
-            new northwindProducts { ProductID=17, ProductName="うす味ウインナー", CategoryName="肉類", InStock=25 },
-            new northwindProducts { ProductID=18, ProductName="かに", CategoryName="魚介類", InStock=10 },
-            new northwindProducts { ProductID=19, ProductName="チョコクリームアイス", CategoryName="菓子類", InStock=18 },
-            new northwindProducts { ProductID=20, ProductName="紅茶バー", CategoryName="菓子類", InStock=18 },
+            new northwindProducts { ProductID=1, ProductName="果汁100% オレンジ", CategoryName="飲料", InStock=39, IsCheck=true },
+            new northwindProducts { ProductID=2, ProductName="果汁100% グレープ", CategoryName="飲料", InStock=17, IsCheck=false },
+            new northwindProducts { ProductID=3, ProductName="ホワイトソルト", CategoryName="調味料", InStock=13, IsCheck=false },
+            new northwindProducts { ProductID=4, ProductName="ブラックペッパー", CategoryName="調味料", InStock=20, IsCheck=false },
+            new northwindProducts { ProductID=5, ProductName="ピュアシュガー", CategoryName="調味料", InStock=19, IsCheck=false },
+            new northwindProducts { ProductID=6, ProductName="うまい素", CategoryName="調味料", InStock=42, IsCheck=false },
+            new northwindProducts { ProductID=7, ProductName="乾燥バナナ", CategoryName="加工食品", InStock=33, IsCheck=false },
+            new northwindProducts { ProductID=8, ProductName="ピュアデミグラスソース", CategoryName="調味料", InStock=9, IsCheck=false },
+            new northwindProducts { ProductID=9, ProductName="アメリカンポーク", CategoryName="肉類", InStock=18, IsCheck=false },
+            new northwindProducts { ProductID=10, ProductName="大陸サーモン", CategoryName="魚介類", InStock=20, IsCheck=false },
+            new northwindProducts { ProductID=11, ProductName="ロッキーチーズ", CategoryName="乳製品", InStock=9, IsCheck=false },
+            new northwindProducts { ProductID=12, ProductName="フレッシュバター", CategoryName="乳製品", InStock=24, IsCheck=false },
+            new northwindProducts { ProductID=13, ProductName="うなぎ", CategoryName="魚介類", InStock=11, IsCheck=false },
+            new northwindProducts { ProductID=14, ProductName="乾燥アップル", CategoryName="加工食品", InStock=40, IsCheck=false },
+            new northwindProducts { ProductID=15, ProductName="だしかつお", CategoryName="調味料", InStock=38, IsCheck=false },
+            new northwindProducts { ProductID=16, ProductName="バニラクリームアイス", CategoryName="菓子類", InStock=13, IsCheck=false },
+            new northwindProducts { ProductID=17, ProductName="うす味ウインナー", CategoryName="肉類", InStock=25, IsCheck=false },
+            new northwindProducts { ProductID=18, ProductName="かに", CategoryName="魚介類", InStock=10, IsCheck=false },
+            new northwindProducts { ProductID=19, ProductName="チョコクリームアイス", CategoryName="菓子類", InStock=18, IsCheck=false },
+            new northwindProducts { ProductID=20, ProductName="紅茶バー", CategoryName="菓子類", InStock=18, IsCheck=false },
           };
 
         this.ViewDataSource = this.OriginalDataSource;
@@ -105,6 +114,14 @@
         public string ProductName { get; set; }
         public string CategoryName { get; set; }
         public int InStock { get; set; }
+        public bool IsCheck { get; set; }
+    }
+
+    private void onChangeIsCheck(northwindProducts item, ChangeEventArgs args)
+    {
+        item.IsCheck = System.Convert.ToBoolean(args.Value);
+        // グリッドのデータ更新
+        this.DataGridRef.NotifyUpdateItem(this.ViewDataSource, this.ViewDataSource.IndexOf(item), item);
     }
 
     private async void KeyboardEventHandler(KeyboardEventArgs args)
